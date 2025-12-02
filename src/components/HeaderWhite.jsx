@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { Link, useNavigate } from 'react-router-dom';
 import { MdNotificationsNone, MdLogout } from 'react-icons/md';
+import { useAuth } from '../contexts/AuthContext';
 import logo from '../assets/pink_logo.svg';
 
 const Header = styled.header`
@@ -106,7 +107,7 @@ const DropdownMenu = styled.div`
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   padding: 0.5rem;
   min-width: 150px;
-  display: ${props => props.isOpen ? 'block' : 'none'};
+  display: ${props => props.$isOpen ? 'block' : 'none'};
   z-index: 100;
   border: 1px solid #eee;
 `;
@@ -135,8 +136,10 @@ const DropdownItem = styled.button`
 export default function HeaderWhite() {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const navigate = useNavigate();
+    const { logout } = useAuth();
 
     const handleLogout = () => {
+        logout();
         navigate('/login');
     };
 
@@ -159,7 +162,7 @@ export default function HeaderWhite() {
                         <Avatar onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
                             <img src={logo} alt="User" />
                         </Avatar>
-                        <DropdownMenu isOpen={isDropdownOpen}>
+                        <DropdownMenu $isOpen={isDropdownOpen}>
                             <DropdownItem onClick={handleLogout}>
                                 <MdLogout />
                                 Sair da conta

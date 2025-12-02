@@ -1,6 +1,8 @@
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 import logo from '../assets/logo.svg';
 
 const VerifyContainer = styled.div`
@@ -186,12 +188,32 @@ const ResendText = styled.p`
     &:hover {
       color: #E06C5F;
     }
+
+    &:disabled {
+      color: #ccc;
+      cursor: not-allowed;
+    }
   }
+`;
+
+const ErrorMessage = styled.div`
+  background-color: #ffe6e6;
+  color: #d32f2f;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  text-align: center;
+  border: 1px solid #ffcccc;
 `;
 
 export default function VerifyCode() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const email = location.state?.email;
+  const { login } = useAuth();
   const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const inputRefs = useRef([]);
 
   const handleChange = (index, value) => {
@@ -234,18 +256,39 @@ export default function VerifyCode() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const fullCode = code.join('');
     if (fullCode.length === 6) {
-      console.log('Code submitted:', fullCode);
-      navigate('/community');
+      setLoading(true);
+      setError('');
+
+      try {
+        const response = await api.verifyCode(email, fullCode);
+        login(response.token);
+        navigate('/community');
+      } catch (err) {
+        setError(err.message || 'Código inválido. Tente novamente.');
+        setCode(['', '', '', '', '', '']);
+        inputRefs.current[0]?.focus();
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const handleResend = () => {
-    console.log('Resending code...');
-    setCode(['', '', '', '', '', '']);
-    inputRefs.current[0]?.focus();
+  const handleResend = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      await api.resendCode(email);
+      setCode(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
+    } catch (err) {
+      setError(err.message || 'Erro ao reenviar código.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const isCodeComplete = code.every(digit => digit !== '');
@@ -282,6 +325,8 @@ export default function VerifyCode() {
             enviado para o seu WhatsApp
           </SubHeader>
 
+          {error && <ErrorMessage>{error}</ErrorMessage>}
+
           <CodeInputContainer>
             {code.map((digit, index) => (
               <CodeInput
@@ -294,17 +339,18 @@ export default function VerifyCode() {
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 placeholder="0"
                 autoFocus={index === 0}
+                disabled={loading}
               />
             ))}
           </CodeInputContainer>
 
-          <Button onClick={handleSubmit} disabled={!isCodeComplete}>
-            Enviar
+          <Button onClick={handleSubmit} disabled={!isCodeComplete || loading}>
+            {loading ? 'Verificando...' : 'Enviar'}
           </Button>
 
           <ResendText>
             Não recebeu o código?
-            <button onClick={handleResend}>Reenviar</button>
+            <button onClick={handleResend} disabled={loading}>Reenviar</button>
           </ResendText>
         </FormContainer>
       </RightPanel>

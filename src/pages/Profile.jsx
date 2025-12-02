@@ -1,48 +1,21 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { 
-  MdEdit, 
-  MdAddCircleOutline, 
-  MdThumbUp, 
-  MdHourglassEmpty, 
-  MdTrendingUp, 
-  MdDescription, 
-  MdVisibility, 
-  MdHandshake,
-  MdVerified,
-  MdRecordVoiceOver,
-  MdGroups,
-  MdLock,
-  MdChevronRight,
+import {
+  MdAddCircleOutline,
+  MdThumbUp,
+  MdHourglassEmpty,
+  MdRocketLaunch,
   MdComment,
-  MdRocketLaunch
+  MdDescription,
+  MdVisibility,
+  MdChevronRight
 } from 'react-icons/md';
 import HeaderWhite from '../components/HeaderWhite';
 import logo from '../assets/pink_logo.svg';
-
-// ==================== FAKE DATA ====================
-const USER_DATA = {
-  name: 'Carol',
-  avatar: logo,
-  bio: 'Acredito no poder da comunidade para transformar a realidade local. Meus interesses são educação, meio ambiente e mobilidade urbana. Busco colaborar em projetos que gerem impacto positivo e duradouro para nossa cidade.',
-  stats: {
-    created: 12,
-    supported: 47,
-    active: 8,
-    boosted: 3
-  },
-  activities: [
-    { id: 1, type: 'created', text: 'Você criou a demanda "Revitalização da Praça da Matriz".', time: 'há 2 dias' },
-    { id: 2, type: 'supported', text: 'Você apoiou o PL "Incentivo à Coleta Seletiva".', time: 'há 5 dias' },
-    { id: 3, type: 'commented', text: 'Você comentou na demanda "Ciclofaixa na Avenida Principal".', time: 'há 1 semana' }
-  ],
-  demandsStatus: {
-    analysis: { current: 4, total: 8 },
-    waiting: { current: 2, total: 8 },
-    completed: { current: 2, total: 8 }
-  }
-};
+import Modal from '../components/Modal';
+import ProfileForm from '../components/ProfileForm';
+import api from '../services/api';
 
 // ==================== STYLES ====================
 const PageContainer = styled.div`
@@ -431,22 +404,51 @@ const LogoFooter = styled.div`
 
 export default function Profile() {
   const navigate = useNavigate();
+  const [profile, setProfile] = React.useState(null);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+
+  React.useEffect(() => {
+    async function fetchProfile() {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await api.getProfile();
+        setProfile(data);
+      } catch (err) {
+        console.error('Erro ao carregar perfil:', err);
+        setError(err.message || 'Erro ao carregar perfil. Verifique se o backend está rodando.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProfile();
+  }, []);
+
+  if (loading) return <PageContainer><HeaderWhite /><MainContent>Carregando...</MainContent></PageContainer>;
+  if (error) return <PageContainer><HeaderWhite /><MainContent>{error}</MainContent></PageContainer>;
+  if (!profile) return null;
 
   return (
     <PageContainer>
       <HeaderWhite />
-      
       <MainContent>
         <ProfileHeader>
           <ProfileAvatar>
-            <img src={USER_DATA.avatar} alt={USER_DATA.name} />
+            <img src={profile.avatar_url || logo} alt={profile.name} />
           </ProfileAvatar>
           <WelcomeText>
-            <h1>Olá, {USER_DATA.name}!</h1>
+            <h1>Olá, {profile.name}!</h1>
             <p>Seja bem-vindo de volta ao seu painel de engajamento.</p>
+            <button style={{marginTop: '1rem', padding: '0.5rem 1.2rem', borderRadius: '24px', background: '#F27D70', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer'}} onClick={() => setEditOpen(true)}>
+              Editar perfil
+            </button>
           </WelcomeText>
         </ProfileHeader>
-
+        <Modal open={editOpen} onClose={() => setEditOpen(false)}>
+          <ProfileForm onUpdate={data => { setProfile(data); setEditOpen(false); }} />
+        </Modal>
         <Grid>
           <Column>
             <section>
@@ -454,36 +456,34 @@ export default function Profile() {
               <StatsGrid>
                 <StatBox>
                   <StatIcon><MdAddCircleOutline /></StatIcon>
-                  <StatNumber>{USER_DATA.stats.created}</StatNumber>
+                  <StatNumber>{profile.stats?.created || 0}</StatNumber>
                   <StatLabel>Demandas Criadas</StatLabel>
                 </StatBox>
                 <StatBox>
                   <StatIcon $bg="#FFF0F0" $color="#E57373"><MdThumbUp /></StatIcon>
-                  <StatNumber>{USER_DATA.stats.supported}</StatNumber>
+                  <StatNumber>{profile.stats?.supported || 0}</StatNumber>
                   <StatLabel>Demandas Apoiadas</StatLabel>
                 </StatBox>
                 <StatBox>
                   <StatIcon $bg="#FFF8E1" $color="#FFB74D"><MdHourglassEmpty /></StatIcon>
-                  <StatNumber>{USER_DATA.stats.active}</StatNumber>
+                  <StatNumber>{profile.stats?.active || 0}</StatNumber>
                   <StatLabel>Demandas Ativas</StatLabel>
                 </StatBox>
               </StatsGrid>
-              
               <ImpactCard>
                 <ImpactIcon>
                   <MdRocketLaunch />
                 </ImpactIcon>
                 <ImpactContent>
                   <h4>Impacto Real</h4>
-                  <p>Seu engajamento ajudou <strong>3 demandas</strong> a terem retorno de órgãos ou avançarem no setor legislativo/executivo.</p>
+                  <p>Seu engajamento ajudou <strong>{profile.stats?.completed || 0} demandas</strong> a terem retorno de órgãos ou avançarem no setor legislativo/executivo.</p>
                 </ImpactContent>
               </ImpactCard>
             </section>
-
             <section>
               <SectionTitle>Histórico de Atividade Recente</SectionTitle>
               <Card>
-                {USER_DATA.activities.map(activity => (
+                {(profile.activities || []).map(activity => (
                   <ActivityItem key={activity.id}>
                     <ActivityIcon>
                       {activity.type === 'created' && <MdAddCircleOutline />}
@@ -498,10 +498,10 @@ export default function Profile() {
                     </ActivityContent>
                   </ActivityItem>
                 ))}
+                {(!profile.activities || profile.activities.length === 0) && <div style={{color:'#999'}}>Nenhuma atividade recente.</div>}
               </Card>
             </section>
           </Column>
-
           <Column>
             <section>
               <SectionTitle>Links Rápidos</SectionTitle>
@@ -520,7 +520,6 @@ export default function Profile() {
                 </QuickLinkItem>
               </Card>
             </section>
-
             <section>
               <SectionTitle>Impacto das Demandas</SectionTitle>
               <Card>
@@ -530,32 +529,33 @@ export default function Profile() {
                 <StatusItem>
                   <StatusHeader>
                     <span>Em análise</span>
-                    <span>{USER_DATA.demandsStatus.analysis.current} de {USER_DATA.demandsStatus.analysis.total}</span>
+                    <span>{profile.demandsStatus?.analysis?.current || 0} de {profile.demandsStatus?.analysis?.total || 0}</span>
                   </StatusHeader>
                   <ProgressBar>
-                    <ProgressFill $percent={(USER_DATA.demandsStatus.analysis.current / USER_DATA.demandsStatus.analysis.total) * 100} />
+                    <ProgressFill $percent={profile.demandsStatus?.analysis?.total ? (profile.demandsStatus.analysis.current / profile.demandsStatus.analysis.total) * 100 : 0} />
                   </ProgressBar>
                 </StatusItem>
                 <StatusItem>
                   <StatusHeader>
                     <span>Aguardando Apoios</span>
-                    <span>{USER_DATA.demandsStatus.waiting.current} de {USER_DATA.demandsStatus.waiting.total}</span>
+                    <span>{profile.demandsStatus?.waiting?.current || 0} de {profile.demandsStatus?.waiting?.total || 0}</span>
                   </StatusHeader>
                   <ProgressBar>
-                    <ProgressFill $percent={(USER_DATA.demandsStatus.waiting.current / USER_DATA.demandsStatus.waiting.total) * 100} />
+                    <ProgressFill $percent={profile.demandsStatus?.waiting?.total ? (profile.demandsStatus.waiting.current / profile.demandsStatus.waiting.total) * 100 : 0} />
                   </ProgressBar>
                 </StatusItem>
                 <StatusItem>
                   <StatusHeader>
                     <span>Concluídas</span>
-                    <span>{USER_DATA.demandsStatus.completed.current} de {USER_DATA.demandsStatus.completed.total}</span>
+                    <span>{profile.demandsStatus?.completed?.current || 0} de {profile.demandsStatus?.completed?.total || 0}</span>
                   </StatusHeader>
                   <ProgressBar>
-                    <ProgressFill $percent={(USER_DATA.demandsStatus.completed.current / USER_DATA.demandsStatus.completed.total) * 100} />
+                    <ProgressFill $percent={profile.demandsStatus?.completed?.total ? (profile.demandsStatus.completed.current / profile.demandsStatus.completed.total) * 100 : 0} />
                   </ProgressBar>
                 </StatusItem>
               </Card>
             </section>
+            {/* Se houver badges/conquistas, exibir aqui usando profile.badges */}
           </Column>
         </Grid>
       </MainContent>

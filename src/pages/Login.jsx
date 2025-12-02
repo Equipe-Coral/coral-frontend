@@ -2,6 +2,8 @@ import styled from 'styled-components';
 import { FaEye, FaEyeSlash, FaUser, FaLock } from 'react-icons/fa';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 import logo from '../assets/logo.svg';
 
 const LoginContainer = styled.div`
@@ -243,9 +245,40 @@ const SecondaryButton = styled(Button)`
   }
 `;
 
+const ErrorMessage = styled.div`
+  background-color: #ffe6e6;
+  color: #d32f2f;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  text-align: center;
+  border: 1px solid #ffcccc;
+`;
+
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await api.login(email, password);
+      login(response.token);
+      navigate('/community');
+    } catch (err) {
+      setError(err.message || 'Erro ao fazer login. Verifique suas credenciais.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <LoginContainer>
@@ -275,11 +308,19 @@ export default function Login() {
         <FormContainer>
           <FormTitle>Entrar na minha conta</FormTitle>
 
+          {error && <ErrorMessage>{error}</ErrorMessage>}
+
           <InputGroup>
             <Label>E-mail</Label>
             <InputWrapper>
               <FaUser />
-              <Input type="email" placeholder="Digite seu e-mail" />
+              <Input 
+                type="email" 
+                placeholder="Digite seu e-mail"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+              />
             </InputWrapper>
           </InputGroup>
 
@@ -290,6 +331,10 @@ export default function Login() {
               <Input
                 type={showPassword ? "text" : "password"}
                 placeholder="Digite sua senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}
+                disabled={loading}
               />
               <TogglePassword onClick={() => setShowPassword(!showPassword)}>
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
@@ -298,7 +343,9 @@ export default function Login() {
             <ForgotPassword>Esqueci minha senha</ForgotPassword>
           </InputGroup>
 
-          <Button>Entrar</Button>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? 'Entrando...' : 'Entrar'}
+          </Button>
 
           <Divider>ou</Divider>
 

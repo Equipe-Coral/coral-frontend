@@ -1,7 +1,11 @@
 import styled from 'styled-components';
 import { FaSearch } from 'react-icons/fa';
+import { MdAutoAwesome } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import homeIllustration from '../assets/teste.svg';
+import Modal from './Modal';
+import api from '../services/api';
 
 const HeroSection = styled.section`
   min-height: 100vh;
@@ -184,11 +188,202 @@ const ButtonContainer = styled.div`
   gap: 0rem;
 `;
 
+const ModalTitle = styled.h2`
+  font-family: var(--font-title);
+  font-size: 1.5rem;
+  color: var(--text);
+  margin: 0 0 1.5rem 0;
+`;
+
+const ModalFormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+`;
+
+const Label = styled.label`
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #E0E0E0;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  background: #FFF5F2;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+
+  &:focus {
+    border-color: var(--primary);
+  }
+
+  &::placeholder {
+    color: #999;
+  }
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #E0E0E0;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  background: #FFF5F2;
+  color: var(--text);
+  outline: none;
+  min-height: 120px;
+  resize: vertical;
+  font-family: inherit;
+
+  &:focus {
+    border-color: var(--primary);
+  }
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #E0E0E0;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  background: #FFF5F2;
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  
+  &:focus {
+    border-color: var(--primary);
+  }
+`;
+
+const FormRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+`;
+
+const SecondaryButton = styled.button`
+  background: transparent;
+  color: #666;
+  border: 1px solid #E0E0E0;
+  border-radius: 12px;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f5f5f5;
+  }
+`;
+
+const PrimaryButton = styled.button`
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 0.6rem 1rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: var(--primary-hover);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const AIButton = styled.button`
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s, transform 0.2s;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
 export default function Hero() {
     const navigate = useNavigate();
+    const [openCreateModal, setOpenCreateModal] = useState(false);
+    const [createData, setCreateData] = useState({
+        title: '',
+        description: '',
+        location: '',
+        category: '',
+        status: 'Em Análise',
+    });
+    const [creating, setCreating] = useState(false);
+    const [formalizingAI, setFormalizingAI] = useState(false);
+    const [error, setError] = useState('');
 
     const handleInteraction = () => {
-        navigate('/login');
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            navigate('/demands');
+        } else {
+            navigate('/login');
+        }
+    };
+
+    const handleCreateDemand = () => {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            setOpenCreateModal(true);
+        } else {
+            navigate('/login');
+        }
+    };
+
+    const handleCloseModal = () => {
+        setOpenCreateModal(false);
+        setCreateData({
+            title: '',
+            description: '',
+            location: '',
+            category: '',
+            status: 'Em Análise',
+        });
+        setError('');
     };
 
     return (
@@ -228,10 +423,108 @@ export default function Hero() {
                             />
                             <FaSearch />
                         </SearchContainer>
-                        <Button onClick={handleInteraction}>Relatar demanda</Button>
+                        <Button onClick={handleCreateDemand}>Relatar demanda</Button>
                     </ButtonContainer>
                 </TextContainer>
             </Content>
+
+            <Modal open={openCreateModal} onClose={handleCloseModal}>
+                <ModalTitle>Relatar nova demanda</ModalTitle>
+                <ModalFormGroup>
+                    <Label>Título</Label>
+                    <Input
+                        placeholder="Ex.: Iluminação pública no bairro X"
+                        value={createData.title}
+                        onChange={(e) => setCreateData({ ...createData, title: e.target.value })}
+                    />
+                </ModalFormGroup>
+                <ModalFormGroup>
+                    <Label>Descrição</Label>
+                    <TextArea
+                        placeholder="Conte os detalhes do problema e por que isso importa"
+                        value={createData.description}
+                        onChange={(e) => setCreateData({ ...createData, description: e.target.value })}
+                    />
+                </ModalFormGroup>
+                <FormRow>
+                    <ModalFormGroup>
+                        <Label>Localização</Label>
+                        <Input
+                            placeholder="Rua/Bairro/Cidade - UF"
+                            value={createData.location}
+                            onChange={(e) => setCreateData({ ...createData, location: e.target.value })}
+                        />
+                    </ModalFormGroup>
+                    <ModalFormGroup>
+                        <Label>Categoria</Label>
+                        <Select
+                            value={createData.category}
+                            onChange={(e) => setCreateData({ ...createData, category: e.target.value })}
+                        >
+                            <option value="">Selecione</option>
+                            <option value="Segurança">Segurança</option>
+                            <option value="Infraestrutura">Infraestrutura</option>
+                            <option value="Meio Ambiente">Meio Ambiente</option>
+                            <option value="Saúde">Saúde</option>
+                            <option value="Economia">Economia</option>
+                        </Select>
+                    </ModalFormGroup>
+                </FormRow>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '0.5rem' }}>
+                    <AIButton
+                        disabled={formalizingAI || !createData.title || !createData.description}
+                        onClick={async () => {
+                            setFormalizingAI(true);
+                            setError('');
+                            try {
+                                const resp = await api.formalizeWithAI(createData);
+                                const improved = resp.demand || resp;
+                                setCreateData({
+                                    title: improved.title || createData.title,
+                                    description: improved.description || createData.description,
+                                    location: improved.location || createData.location,
+                                    category: improved.category || createData.category,
+                                    status: createData.status,
+                                });
+                            } catch (e) {
+                                setError(e.message || 'Erro ao formalizar com IA');
+                            } finally {
+                                setFormalizingAI(false);
+                            }
+                        }}
+                    >
+                        <MdAutoAwesome size={18} />
+                        {formalizingAI ? 'Processando...' : 'Formalizar com IA'}
+                    </AIButton>
+                </div>
+
+                <ModalActions>
+                    <SecondaryButton onClick={handleCloseModal}>Cancelar</SecondaryButton>
+                    <PrimaryButton
+                        disabled={creating || !createData.title || !createData.description}
+                        onClick={async () => {
+                            setCreating(true);
+                            setError('');
+                            try {
+                                await api.createDemand(createData);
+                                handleCloseModal();
+                                navigate('/demands');
+                            } catch (e) {
+                                setError(e.message || 'Erro ao criar demanda');
+                            } finally {
+                                setCreating(false);
+                            }
+                        }}
+                    >
+                        {creating ? 'Criando...' : 'Criar demanda'}
+                    </PrimaryButton>
+                </ModalActions>
+
+                {error && (
+                    <p style={{ color: '#c00', marginTop: '0.75rem', fontSize: '0.9rem' }}>{error}</p>
+                )}
+            </Modal>
         </HeroSection>
     );
 }

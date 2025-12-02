@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import React from 'react';
-import { MdShield, MdCheckCircle, MdHourglassEmpty, MdGavel } from 'react-icons/md';
+import { MdShield, MdCheckCircle, MdHourglassEmpty, MdGavel, MdLocalHospital, MdSchool, MdDirectionsBus, MdEco, MdAttachMoney, MdDiversity3, MdComputer } from 'react-icons/md';
 
 const CardWrapper = styled.div`
   background: white;
@@ -81,11 +81,25 @@ export default function WideDiscussionCard({
   status,
   onClick
 }) {
+  const getCategoryIcon = (category) => {
+    const c = (category || '').toLowerCase();
+    if (c.includes('segurança')) return <MdShield />;
+    if (c.includes('saúde') || c.includes('saude')) return <MdLocalHospital />;
+    if (c.includes('educação') || c.includes('educacao')) return <MdSchool />;
+    if (c.includes('transporte')) return <MdDirectionsBus />;
+    if (c.includes('ambiente')) return <MdEco />;
+    if (c.includes('economia')) return <MdAttachMoney />;
+    if (c.includes('direitos humanos')) return <MdDiversity3 />;
+    if (c.includes('tecnologia')) return <MdComputer />;
+    return <MdGavel />;
+  };
+
   const getStatusStyle = (status) => {
-    if (status.toLowerCase().includes('aprovado')) {
+    const s = (status || '').toLowerCase();
+    if (s.includes('aprov')) {
       return { bg: '#E8F5E9', color: '#2E7D32', icon: <MdCheckCircle /> };
     }
-    if (status.toLowerCase().includes('em tramitação')) {
+    if (s.includes('tramita')) {
       return { bg: '#FAEFE0', color: '#DE9331', icon: <MdHourglassEmpty /> };
     }
     return { bg: '#E0E0E0', color: '#616161', icon: <MdHourglassEmpty /> };
@@ -102,7 +116,7 @@ export default function WideDiscussionCard({
         </AuthorInfo>
         <Tags>
           <Tag $borderColor="#D89F66" $color="#D89F66" $bgColor="white">
-            <MdShield />
+            {getCategoryIcon(category)}
             {category}
           </Tag>
           <Tag $bgColor={statusStyle.bg} $color={statusStyle.color}>

@@ -2,6 +2,7 @@ import styled from 'styled-components';
 import { FaUser, FaLock, FaPhone, FaIdCard, FaEye, FaEyeSlash, FaMapMarkerAlt, FaHome } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import api from '../services/api';
 import logo from '../assets/logo.svg';
 
 const RegisterContainer = styled.div`
@@ -294,6 +295,7 @@ export default function Register() {
   });
 
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (formData.uf) {
@@ -436,7 +438,7 @@ export default function Register() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 1) {
       if (validateStep1()) {
         setStep(2);
@@ -447,8 +449,27 @@ export default function Register() {
       }
     } else {
       if (validateStep3()) {
-        console.log('Form submitted', formData);
-        navigate('/verify-code');
+        setLoading(true);
+        try {
+          const userData = {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone.replace(/\D/g, ''),
+            cpf: formData.cpf.replace(/\D/g, ''),
+            password: formData.password,
+            uf: formData.uf,
+            city: formData.city,
+            address: formData.address,
+            number: formData.number
+          };
+
+          await api.register(userData);
+          navigate('/verify-code', { state: { email: formData.email } });
+        } catch (err) {
+          setErrors({ submit: err.message || 'Erro ao criar conta. Tente novamente.' });
+        } finally {
+          setLoading(false);
+        }
       }
     }
   };
@@ -674,7 +695,10 @@ export default function Register() {
                 {errors.number && <ErrorMessage>{errors.number}</ErrorMessage>}
               </InputGroup>
 
-              <Button onClick={handleNext}>Cadastrar</Button>
+              <Button onClick={handleNext} disabled={loading}>
+                {loading ? 'Cadastrando...' : 'Cadastrar'}
+              </Button>
+              {errors.submit && <ErrorMessage>{errors.submit}</ErrorMessage>}
             </>
           ) : null}
 

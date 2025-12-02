@@ -1,6 +1,8 @@
 import styled from 'styled-components';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { GlobalStyles } from './styles/GlobalStyles';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Login from './pages/Login';
@@ -29,22 +31,48 @@ const Home = () => (
 function App() {
   return (
     <Router>
-      <GlobalStyles />
-      <AppContainer>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify-code" element={<VerifyCode />} />
-          <Route path="/community" element={<Community />} />
-          <Route path="/demands" element={<ExploreDemands />} />
-          <Route path="/discussions" element={<ExploreDiscussions />} />
-          <Route path="/demand/:id" element={<DemandDetail />} />
-          <Route path="/discussion/:id" element={<DiscussionDetail />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </AppContainer>
+      <AuthProvider>
+        <GlobalStyles />
+        <AppContainer>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/verify-code" element={<VerifyCode />} />
+            <Route path="/community" element={
+              <ProtectedRoute>
+                <Community />
+              </ProtectedRoute>
+            } />
+            <Route path="/demands" element={
+              <ProtectedRoute>
+                <ExploreDemands />
+              </ProtectedRoute>
+            } />
+            <Route path="/discussions" element={
+              <ProtectedRoute>
+                <ExploreDiscussions />
+              </ProtectedRoute>
+            } />
+            <Route path="/demand/:id" element={
+              <ProtectedRoute>
+                <DemandDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/discussion/:id" element={
+              <ProtectedRoute>
+                <DiscussionDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AppContainer>
+      </AuthProvider>
     </Router>
   );
 }

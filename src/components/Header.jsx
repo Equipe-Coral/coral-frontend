@@ -1,5 +1,7 @@
 import styled from 'styled-components';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaBell, FaUserCircle } from 'react-icons/fa';
+import { useAuth } from '../contexts/AuthContext';
 import logo from '../assets/logo.svg';
 
 const HeaderContainer = styled.header`
@@ -42,7 +44,7 @@ const Nav = styled.nav`
   }
 `;
 
-const NavLink = styled.a`
+const NavLink = styled(Link)`
   text-decoration: none;
   color: var(--white);
   font-weight: 500;
@@ -77,7 +79,41 @@ const IconWrapper = styled.div`
   }
 `;
 
+const AuthButtons = styled.div`
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+`;
+
+const Button = styled(Link)`
+  padding: 0.6rem 1.5rem;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+  
+  ${props => props.$variant === 'primary' ? `
+    background: white;
+    color: var(--primary);
+    &:hover {
+      background: #f5f5f5;
+    }
+  ` : `
+    background: transparent;
+    color: white;
+    border: 2px solid white;
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+  `}
+`;
+
 export default function Header() {
+    const navigate = useNavigate();
+    const { isAuthenticated } = useAuth();
+
     return (
         <HeaderContainer>
             <Logo>
@@ -85,21 +121,27 @@ export default function Header() {
                 Coral
             </Logo>
             <Actions>
-                <Nav>
-                    <NavLink href="#">Início</NavLink>
-                    <NavLink href="#">Demandas</NavLink>
-                    <NavLink href="#">Comunidade</NavLink>
-                    <NavLink href="#">Meu Perfil</NavLink>
-                </Nav>
-                {/*Adicionar hover*/}
-                <>
-                    <IconWrapper>
-                        <FaBell />
-                    </IconWrapper>
-                    <IconWrapper>
-                        <FaUserCircle />
-                    </IconWrapper>
-                </>
+                {isAuthenticated ? (
+                    <>
+                        <Nav>
+                            <NavLink to="/">Início</NavLink>
+                            <NavLink to="/demands">Demandas</NavLink>
+                            <NavLink to="/community">Comunidade</NavLink>
+                            <NavLink to="/profile">Meu Perfil</NavLink>
+                        </Nav>
+                        <IconWrapper onClick={() => navigate('/profile')}>
+                            <FaBell />
+                        </IconWrapper>
+                        <IconWrapper onClick={() => navigate('/profile')}>
+                            <FaUserCircle />
+                        </IconWrapper>
+                    </>
+                ) : (
+                    <AuthButtons>
+                        <Button to="/login" $variant="outline">Entrar</Button>
+                        <Button to="/register" $variant="primary">Cadastrar</Button>
+                    </AuthButtons>
+                )}
             </Actions>
         </HeaderContainer>
     );

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { MdLocationOn, MdPictureAsPdf, MdThumbUp, MdCheck, MdShield, MdArrowBack } from 'react-icons/md';
 import HeaderWhite from '../components/HeaderWhite';
+import api from '../services/api';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -118,13 +119,13 @@ const TimelineItem = styled.div`
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: ${props => props.active ? '#90EE90' : '#E0E0E0'};
+    background: ${props => props.$active ? '#90EE90' : '#E0E0E0'};
     border: 2px solid white;
-    box-shadow: 0 0 0 2px ${props => props.active ? '#90EE90' : 'transparent'};
+    box-shadow: 0 0 0 2px ${props => props.$active ? '#90EE90' : 'transparent'};
     z-index: 1;
   }
 
-  ${props => props.current && `
+  ${props => props.$current && `
     &::after {
       background: #F27D70;
       box-shadow: 0 0 0 2px #F27D70;
@@ -134,7 +135,7 @@ const TimelineItem = styled.div`
 
 const TimelineTitle = styled.h4`
   font-weight: 600;
-  color: ${props => props.active || props.current ? 'var(--text)' : '#999'};
+  color: ${props => props.$active || props.$current ? 'var(--text)' : '#999'};
   margin-bottom: 0.25rem;
 `;
 
@@ -195,8 +196,8 @@ const InfoGrid = styled.div`
 
 const SupportButton = styled.button`
   width: 100%;
-  background: ${props => props.supported ? '#E0E0E0' : 'var(--primary)'};
-  color: ${props => props.supported ? '#666' : 'white'};
+  background: ${props => props.$supported ? '#E0E0E0' : 'var(--primary)'};
+  color: ${props => props.$supported ? '#666' : 'white'};
   border: none;
   border-radius: 12px;
   padding: 1rem;
@@ -207,19 +208,19 @@ const SupportButton = styled.button`
   justify-content: center;
   gap: 0.75rem;
   transition: all 0.2s;
-  box-shadow: ${props => props.supported ? 'none' : '0 4px 10px rgba(242, 125, 112, 0.3)'};
-  cursor: ${props => props.supported ? 'default' : 'pointer'};
+  box-shadow: ${props => props.$supported ? 'none' : '0 4px 10px rgba(242, 125, 112, 0.3)'};
+  cursor: ${props => props.$supported ? 'default' : 'pointer'};
 
   &:hover {
-    background: ${props => props.supported ? '#E0E0E0' : 'var(--primary-hover)'};
+    background: ${props => props.$supported ? '#E0E0E0' : 'var(--primary-hover)'};
   }
 `;
 
 const BillCard = styled.div`
   background: white;
   border-radius: 16px;
-  padding: 1.5rem;
-  margin-bottom: 1rem;
+  padding: 1.25rem;
+  margin-bottom: 0rem;
   box-shadow: 0 4px 6px rgba(0,0,0,0.05);
   cursor: pointer;
   transition: transform 0.2s;
@@ -239,8 +240,12 @@ const BillHeader = styled.div`
 const BillTitle = styled.h4`
   font-weight: 700;
   color: var(--text);
-  font-size: 1.125rem;
-  margin-bottom: 1rem;
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
 `;
 
 const BillTag = styled.span`
@@ -250,6 +255,16 @@ const BillTag = styled.span`
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 600;
+`;
+
+const BillSummary = styled.p`
+  color: var(--text-light);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
 `;
 
 const BillLink = styled.a`
@@ -268,7 +283,7 @@ const BillFooter = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 1rem;
+  margin-top: 0.75rem;
 `;
 
 const CategoryTag = styled.span`
@@ -318,57 +333,104 @@ const BackButton = styled.button`
   }
 `;
 
-const fake_data = {
-  id: "0x27a32e.23x9f82x00",
-  title: "Programa Municipal de Iluminação Segura da Praça do Cajueiro",
-  location: "Rua Fictícia, 123 - Pinheiros, São Paulo - SP",
-  status: "Segurança",
-  supports: 125,
-  summary: "A comunidade local relata uma preocupante falta de iluminação na Praça do Cajueiro, criando um ambiente de insegurança durante a noite. A ausência de partes de luz funcionais e a vegetação densa que obstrui a pouca luz existente contribuem para a baixa visibilidade, aumentando o risco de acidentes e atividades ilícitas. Os moradores solicitam a instalação urgente de nova iluminação e a poda adequada das árvores para garantir a segurança e o uso comunitário do espaço.",
-  timeline: [
-    { status: "Relato criado", date: "15 de Julho de 2025", active: true },
-    { status: "Publicado como demanda comunitária", date: "15 de Julho de 2025", active: true },
-    { status: "Relatório criado", description: "Atingiu o limiar de apoios! O relatório está sendo gerado.", active: true, current: true },
-    { status: "Relatório enviado", active: false },
-    { status: "Órgão respondeu", active: false },
-    { status: "Resolvido / Não resolvido / Em acompanhamento", active: false }
-  ],
-  communityReport: {
-    summary: "Moradores da região da Praça do Cajueiro relatam a inexistência de iluminação pública adequada no local após as 19h, circunstância que tem favorecido a ocorrência de delitos patrimoniais e elevado a sensação de insegurança.\n\nA insuficiência de luminárias e a ausência de rondas preventivas da Guarda Municipal configuram situação que compromete o uso seguro do espaço público e viola o direito fundamental à segurança previsto no art. 144 da Constituição Federal.",
-    impact: "Afeta diretamente a segurança de centenas de moradores do entorno, incluindo crianças e idosos que utilizam o espaço para lazer.",
-    organs: "Secretaria de Obras, Prefeitura de São Paulo",
-    protocol: "PMSSP-2025-07-21-00123",
-    responseStatus: "Aguardando resposta"
-  },
-  relatedBills: [
-    {
-      id: "PL 00/0000",
-      title: "Ilumina Sampa",
-      summary: "Propõe a modernização completa do parque de iluminação pública da cidade com tecnologia LED.",
-      relation: "Este projeto de lei pode acelerar a substituição das lâmpadas na sua região.",
-      status: "Em tramitação na Câmara"
-    },
-    {
-      id: "PL 00/0000",
-      title: "Ilumina Sampa",
-      summary: "Propõe a modernização completa do parque de iluminação pública da cidade com tecnologia LED.",
-      relation: "Este projeto de lei pode acelerar a substituição das lâmpadas na sua região.",
-      status: "Em tramitação na Câmara"
-    }
-  ]
-};
+// Demand detail is fetched from API
 
 const DemandDetail = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const [demand, setDemand] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [isSupported, setIsSupported] = useState(false);
+  const [similarBills, setSimilarBills] = useState([]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    async function loadDemand() {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await api.getDemandById(id);
+        setDemand(data);
+        setIsSupported(!!data.supportedByUser);
+        // Buscar PLs semelhantes via camara-proxy (fallback client-side)
+        // Priorizar título para busca, pois resumo pode ser muito longo ou conter textos genéricos
+        const topic = (data.title || data.summary || '').trim();
+        if (topic) {
+          // Remover stopwords e pegar as palavras mais significativas
+          const stopwords = ['de', 'a', 'o', 'as', 'os', 'e', 'para', 'com', 'em', 'do', 'da', 'dos', 'das', 'um', 'uma', 'uns', 'umas', 'que', 'é', 'foi', 'por', 'na', 'no', 'nas', 'nos', 'se', 'ao', 'aos', 'pelo', 'pela', 'esta', 'este', 'isso', 'aquilo', 'demandamos', 'solicitamos', 'queremos', 'sobre', 'como'];
+          
+          // Função para remover acentos
+          const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-  const handleSupport = () => {
-    setIsSupported(true);
+          // Filtrar stopwords e palavras curtas
+          const meaningfulWords = topic.split(/[\s,.-]+/)
+            .map(w => w.trim())
+            .filter(w => w.length > 3 && !stopwords.includes(w.toLowerCase()));
+            
+          try {
+            let items = [];
+            
+            // 1. Tenta buscar com as 2 primeiras palavras juntas (mais específico)
+            if (meaningfulWords.length >= 2) {
+              const combinedKeyword = meaningfulWords.slice(0, 2).map(normalize).join(' ');
+              console.log('Tentando busca combinada:', combinedKeyword);
+              const resp = await api.searchPropositions({ keyword: combinedKeyword });
+              items = resp.dados || [];
+            }
+
+            // 2. Se não encontrou nada, tenta palavra por palavra (mais abrangente)
+            if (items.length === 0 && meaningfulWords.length > 0) {
+              console.log('Busca combinada vazia, tentando palavras individuais...');
+              for (const word of meaningfulWords.slice(0, 3)) { // Tenta as 3 primeiras palavras
+                const w = normalize(word);
+                console.log('Tentando palavra:', w);
+                const resp = await api.searchPropositions({ keyword: w });
+                if (resp.dados && resp.dados.length > 0) {
+                  items = resp.dados;
+                  console.log(`Encontrados ${items.length} resultados com a palavra "${w}"`);
+                  break; // Encontrou resultados, para de procurar
+                }
+              }
+            }
+
+            console.log('Items finais:', items);
+            const top3 = items.slice(0, 3).map(p => ({
+              id: p.id || p.billCode || (p.siglaTipo ? (p.siglaTipo + ' ' + (p.numero || '') + '/' + (p.ano || '')) : ''),
+              billCode: (p.siglaTipo && p.numero && p.ano) ? `${p.siglaTipo} ${p.numero}/${p.ano}` : (p.billCode || ''),
+              title: p.ementa || p.descricao || 'Proposição',
+              summary: p.ementaDetalhada || p.ementa || '',
+              relation: 'Assunto semelhante ao tema da demanda',
+              status: (p.statusProposicao && p.statusProposicao.sigla) ? p.statusProposicao.sigla : (p.situacao || 'Em tramitação'),
+            }));
+            console.log('Top 3 PLs processados:', top3);
+            setSimilarBills(top3);
+          } catch (err) {
+            console.error('Erro final ao buscar PLs:', err);
+            // silencioso se falhar
+          }
+        }
+      } catch (e) {
+        setError('Erro ao carregar demanda.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDemand();
+  }, [id]);
+
+  const handleSupport = async () => {
+    try {
+      await api.supportDemand(id);
+      setIsSupported(true);
+      setDemand(d => ({ ...d, supports: (d?.supports || 0) + 1 }));
+    } catch (e) {
+      // noop or show error UI
+    }
   };
+
+  if (loading) return <PageContainer><HeaderWhite /><ContentWrapper>Carregando...</ContentWrapper></PageContainer>;
+  if (error || !demand) return <PageContainer><HeaderWhite /><ContentWrapper>{error || 'Demanda não encontrada.'}</ContentWrapper></PageContainer>;
 
   return (
     <PageContainer>
@@ -381,26 +443,26 @@ const DemandDetail = () => {
         <MainCard>
           <HeaderRow>
             <Title>
-              {fake_data.title}
-              <Hash>#{fake_data.id}</Hash>
+              {demand.title}
+              {demand.hash && <Hash>#{demand.hash}</Hash>}
             </Title>
             <CategoryTag $bgColor="#F5E6D3" $iconColor="#D89F66">
               <MdShield />
-              {fake_data.status}
+              {demand.status}
             </CategoryTag>
           </HeaderRow>
           
           <LocationRow>
             <MdLocationOn size={18} />
-            {fake_data.location}
+            {demand.location}
           </LocationRow>
 
           <SectionTitle>Resumo da demanda (gerado por Inteligência Artificial):</SectionTitle>
-          <Text>{fake_data.summary}</Text>
+          <Text>{demand.summary}</Text>
           
           <SupportCount>
             <MdThumbUp size={18} />
-            {fake_data.supports} pessoas apoiaram esta demanda
+            {(demand.supports || 0)} pessoas apoiaram esta demanda
           </SupportCount>
         </MainCard>
 
@@ -408,9 +470,9 @@ const DemandDetail = () => {
           <Column>
             <SectionTitle>Linha do tempo</SectionTitle>
             <TimelineContainer>
-              {fake_data.timeline.map((item, index) => (
-                <TimelineItem key={index} active={item.active} current={item.current}>
-                  <TimelineTitle active={item.active} current={item.current}>
+              {(demand.timeline || []).map((item, index) => (
+                <TimelineItem key={index} $active={item.active} $current={item.current}>
+                  <TimelineTitle $active={item.active} $current={item.current}>
                     {item.status}
                   </TimelineTitle>
                   {item.date && <TimelineDate>{item.date}</TimelineDate>}
@@ -423,12 +485,12 @@ const DemandDetail = () => {
             <ReportCard>
               <ReportSection>
                 <ReportLabel>Resumo:</ReportLabel>
-                <Text style={{ whiteSpace: 'pre-line' }}>{fake_data.communityReport.summary}</Text>
+                <Text style={{ whiteSpace: 'pre-line' }}>{demand.communityReport?.summary}</Text>
               </ReportSection>
               
               <ReportSection>
                 <ReportLabel>Impacto estimado:</ReportLabel>
-                <Text>{fake_data.communityReport.impact}</Text>
+                <Text>{demand.communityReport?.impact}</Text>
               </ReportSection>
 
               <DownloadLink href="#">
@@ -438,18 +500,18 @@ const DemandDetail = () => {
 
               <ReportSection>
                 <ReportLabel>Órgãos contatados:</ReportLabel>
-                <Text>{fake_data.communityReport.organs}</Text>
+                <Text>{demand.communityReport?.organs}</Text>
               </ReportSection>
 
               <InfoGrid>
                 <div>
                   <ReportLabel>Protocolo de envio:</ReportLabel>
-                  <Text>{fake_data.communityReport.protocol}</Text>
+                  <Text>{demand.communityReport?.protocol}</Text>
                 </div>
                 <div>
                   <ReportLabel>Status da resposta:</ReportLabel>
                   <Text style={{ color: '#D4A017', fontWeight: '600' }}>
-                    {fake_data.communityReport.responseStatus}
+                    {demand.communityReport?.responseStatus}
                   </Text>
                 </div>
               </InfoGrid>
@@ -458,24 +520,24 @@ const DemandDetail = () => {
 
           <Column>
             <SectionTitle>Apoiar Demanda</SectionTitle>
-            <SupportButton onClick={handleSupport} supported={isSupported} disabled={isSupported}>
+            <SupportButton onClick={handleSupport} $supported={isSupported} disabled={isSupported}>
               {isSupported ? <MdCheck size={24} /> : <MdThumbUp size={24} />}
               {isSupported ? 'Você apoiou essa demanda' : 'Apoiar essa demanda'}
             </SupportButton>
 
             <SectionTitle style={{ marginTop: '1rem' }}>Projetos de Leis Relacionados</SectionTitle>
-            {fake_data.relatedBills.map((bill, index) => (
+            {(demand.relatedBills || []).map((bill, index) => (
               <BillCard key={index} onClick={() => navigate(`/discussion/${bill.id}`)}>
                 <BillTitle>{bill.id} - {bill.title}</BillTitle>
                 
                 <ReportSection>
                   <ReportLabel style={{ fontSize: '0.9rem' }}>Resumo:</ReportLabel>
-                  <Text style={{ fontSize: '0.9rem' }}>{bill.summary}</Text>
+                  <BillSummary>{bill.summary}</BillSummary>
                 </ReportSection>
 
                 <ReportSection>
                   <ReportLabel style={{ fontSize: '0.9rem' }}>Relação:</ReportLabel>
-                  <Text style={{ fontSize: '0.9rem' }}>{bill.relation}</Text>
+                  <BillSummary>{bill.relation}</BillSummary>
                 </ReportSection>
 
                 <BillFooter>
@@ -484,6 +546,27 @@ const DemandDetail = () => {
                 </BillFooter>
               </BillCard>
             ))}
+
+            {similarBills.length > 0 && (
+              similarBills.map((bill, index) => (
+                <BillCard key={`sim-${index}`} onClick={() => navigate(`/discussion/${bill.id}`)}>
+                  <BillHeader>
+                    <BillTitle>{bill.billCode || bill.id} - {bill.title}</BillTitle>
+                    <BillTag>{bill.status}</BillTag>
+                  </BillHeader>
+                  {bill.summary && (
+                    <ReportSection>
+                      <ReportLabel style={{ fontSize: '0.9rem' }}>Resumo:</ReportLabel>
+                      <BillSummary>{bill.summary}</BillSummary>
+                    </ReportSection>
+                  )}
+                  <ReportSection>
+                    <ReportLabel style={{ fontSize: '0.9rem' }}>Relação:</ReportLabel>
+                    <BillSummary>{bill.relation}</BillSummary>
+                  </ReportSection>
+                </BillCard>
+              ))
+            )}
           </Column>
         </Grid>
       </ContentWrapper>
